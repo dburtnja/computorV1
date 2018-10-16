@@ -17,46 +17,68 @@ class Term:
     _coefficient = 1
 
     def __init__(self, term_string):
-        if term_string.startswith("-"):
-            self._term_string = term_string.replace(SUBTRACTION, "")
-            self._positive = False
-        else:
-            self._positive = True
-            self._term_string = term_string.replace(ADDITION, "")
-        search_result = search(r"^\-?(\d*\.?\d*)((\w)(\^(\d))?)?", self._term_string)
+        self._term_string = str(term_string)
+        search_result = search(r"^([\-\+]?\d*\.?\d*)((\w)(\^(\d))?)?", self._term_string)
         if search_result.group(1):
-            self._coefficient = search_result.group(1)
+            self._coefficient = float(search_result.group(1))
+            print(search_result.group(1), self._coefficient)
         if search_result.group(3):
             self._variable_name = search_result.group(3)
         if search_result.group(5):
-            self._power = search_result.group(5)
-        print(self)
-        pprint(self.__dict__)
+            self._power = int(search_result.group(5))
+
+    def is_like(self, term):
+        return self._variable_name == term._variable_name \
+               and self._power == term._power
+
+    def get_coefficient(self):
+        return self._coefficient
+
+    def merge(self, term):
+        if self.is_like(term):
+            self._coefficient = self.get_coefficient() + term.get_coefficient()
+            return True
+        return False
 
     def change_sign(self):
-        self._positive = not self._positive
+        self._coefficient = -self._coefficient
         return self
 
     def __str__(self):
         return self.__repr__()
 
     def __repr__(self):
-        return ("+" if self._positive else "-") + self._term_string
+        return \
+            f"{('%f' % self.get_coefficient()).rstrip('0').rstrip('.')}*{self._variable_name}^{self._power}"
 
 
 class Polynomial:
 
     def __init__(self, equation):
+        self._terms = []
         equation = str(equation)
         equation = equation.replace(" ", "").replace("*", "")
         self._split_terms(equation)
-
-    # def __split_get_negative_terms(self):
 
     def _split_terms(self, equation):
         self._terms = \
             [Term(term_str)
              for term_str in findall(r"[\-\+]?[\d\w\.\^]+", equation)]
+
+    def simplify(self):
+        terms_start = list(self._terms)
+        temporary_terms = []
+        self._terms = []
+
+        while terms_start:
+            term = terms_start.pop(0)
+            for other_term in terms_start:
+                successfully_merged = term.merge(other_term)
+                if not successfully_merged:
+                    temporary_terms.append(other_term)
+            terms_start = temporary_terms
+            temporary_terms = []
+            self._terms.append(term)
 
     def __str__(self):
         if self._terms:
@@ -77,6 +99,8 @@ class PolynomialEquation:
 
     def simplify(self):
         self._move_all_terms_to_left()
+        print(self)
+        self._left_polynomial.simplify()
 
     def _move_all_terms_to_left(self):
         for term in self._right_polynomial._terms:
@@ -91,6 +115,7 @@ if __name__ == '__main__':
     if len(argv) != 2:
         usage("Invalid number of arguments.")
     polynomial_equation = PolynomialEquation(argv[1])
+    print(polynomial_equation)
     polynomial_equation.simplify()
     print(polynomial_equation)
 
