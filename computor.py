@@ -2,9 +2,7 @@ from sys import argv
 from re import findall, search
 from pprint import pprint
 
-ADDITION = "+"
-SUBTRACTION = "-"
-
+MAX_POLYNOMIAL_DEGREE = 2
 
 def usage(error=None):
     if error:
@@ -21,7 +19,6 @@ class Term:
         search_result = search(r"^([\-\+]?\d*\.?\d*)((\w)(\^(\d))?)?", self._term_string)
         if search_result.group(1):
             self._coefficient = float(search_result.group(1))
-            print(search_result.group(1), self._coefficient)
         if search_result.group(3):
             self._variable_name = search_result.group(3)
         if search_result.group(5):
@@ -33,6 +30,9 @@ class Term:
 
     def get_coefficient(self):
         return self._coefficient
+
+    def get_power(self):
+        return self._power
 
     def merge(self, term):
         if self.is_like(term):
@@ -51,6 +51,12 @@ class Term:
         return \
             f"{('%f' % self.get_coefficient()).rstrip('0').rstrip('.')}*{self._variable_name}^{self._power}"
 
+    def __eq__(self, other):
+        return self._power == other._power
+
+    def __lt__(self, other):
+        return self._power < other._power
+
 
 class Polynomial:
 
@@ -59,6 +65,7 @@ class Polynomial:
         equation = str(equation)
         equation = equation.replace(" ", "").replace("*", "")
         self._split_terms(equation)
+        self._degree = None
 
     def _split_terms(self, equation):
         self._terms = \
@@ -79,6 +86,11 @@ class Polynomial:
             terms_start = temporary_terms
             temporary_terms = []
             self._terms.append(term)
+        self._terms = sorted(self._terms)
+        self._degree = self._terms[-1].get_power()
+
+    def get_degree(self):
+        return self._degree
 
     def __str__(self):
         if self._terms:
@@ -99,13 +111,15 @@ class PolynomialEquation:
 
     def simplify(self):
         self._move_all_terms_to_left()
-        print(self)
         self._left_polynomial.simplify()
 
     def _move_all_terms_to_left(self):
         for term in self._right_polynomial._terms:
             self._left_polynomial._terms.append(term.change_sign())
         self._right_polynomial._terms = []
+
+    def get_degree(self):
+        return self._left_polynomial.get_degree()
 
     def __str__(self):
         return f"{self._left_polynomial} = {self._right_polynomial}"
@@ -115,8 +129,12 @@ if __name__ == '__main__':
     if len(argv) != 2:
         usage("Invalid number of arguments.")
     polynomial_equation = PolynomialEquation(argv[1])
-    print(polynomial_equation)
+    # print(polynomial_equation)
     polynomial_equation.simplify()
-    print(polynomial_equation)
+    print(f"Reduced form: {polynomial_equation}")
+    print(f"Polynomial degree: {polynomial_equation.get_degree()}")
+    if polynomial_equation.get_degree() > MAX_POLYNOMIAL_DEGREE:
+        print(f"The polynomial degree is strictly grader then "
+              f"{MAX_POLYNOMIAL_DEGREE}, I can't solve.")
 
 
