@@ -25,14 +25,14 @@ class Term:
     def __init__(self, term_string, default=False):
         self._default = default
         self._term_string = str(term_string)
-        search_result = search(r"^([\-\+]?\d*\.?\d*)((\w)(\^(\d))?)?", self._term_string)
-        if search_result.group(1):
-            self._coefficient = float(search_result.group(1))
-        if search_result.group(3):
-            self._variable_name = search_result.group(3)
+        search_result = search(r"^([\-\+]?)(\d*\.?\d*)((\w)(\^(\d))?)?", self._term_string)
+        if search_result.group(2) or search_result.group(1):
+            self._coefficient = float(search_result.group(2) or 1) * float(search_result.group(1) + "1")
+        if search_result.group(4):
+            self._variable_name = search_result.group(4)
             self._power = 1
-        if search_result.group(5):
-            self._power = int(search_result.group(5))
+        if search_result.group(6):
+            self._power = int(search_result.group(6))
 
     def is_like(self, term):
         return self._variable_name == term._variable_name \
@@ -100,7 +100,10 @@ class Polynomial:
                     temporary_terms.append(other_term)
             terms_start = temporary_terms
             temporary_terms = []
-            self._terms.append(term)
+            if term.get_coefficient():
+                self._terms.append(term)
+        if len(self._terms) < 1:
+            raise ValueError("It's not a equation!")
         self._terms = sorted(self._terms)
         self._degree = self._terms[-1].get_power()
 
@@ -201,7 +204,7 @@ class PolynomialEquation:
         self._equation_string = str(equation_string)
         equations = self._equation_string.split("=")
         if len(equations) != 2:
-            raise ValueError
+            raise ValueError("It's not a equation!")
         self._left_polynomial = Polynomial(equations[0])
         self._right_polynomial = Polynomial(equations[1])
 
@@ -225,23 +228,27 @@ class PolynomialEquation:
 
 
 def run_computor(input_equation):
-    polynomial_equation = PolynomialEquation(input_equation)
-    polynomial_equation.simplify()
-    print(f"Reduced form: {polynomial_equation}")
-    solution = polynomial_equation.find_solution()
-    if solution is not None:
-        print("The solution is:")
-        if isinstance(solution, float):
-            print(solution)
-        elif len(solution) == 2:
-            print("Discriminant is strictly positive, the two solutions are:")
-            print(solution[0])
-            print(solution[1])
-        return solution
+    try:
+        polynomial_equation = PolynomialEquation(input_equation)
+        polynomial_equation.simplify()
+        print(f"Reduced form: {polynomial_equation}")
+        solution = polynomial_equation.find_solution()
+        if solution is not None:
+            print("The solution is:")
+            if isinstance(solution, float):
+                print(solution)
+            elif len(solution) == 2:
+                print("Discriminant is strictly positive, the two solutions are:")
+                print(solution[0])
+                print(solution[1])
+            return solution
+    except ValueError as error:
+        print(f"Error: {error}")
 
 
 def test_computor():
     failed = 0
+
     test_input = {
         "5 * X^0 + 4 * X^1 = 4 * X^0": -0.25,
         "5 * X^0 + 4 * X^1 - 9.3 * X^2 = 1 * X^0": (0.9052389907905898, -0.47513146390886934),
@@ -249,7 +256,14 @@ def test_computor():
         "2x^2 - 18 =0": (0.0, 9.0),
         "0 = 0": None,
         "x=0": 0,
-        "5 + 3X + 3 * X^2 = X^2 + 0 * X": ("-2.1419410907075056i", "0.6419410907075054i")
+        "5 + 3X + 3 * X^2 = X^2 + 0 * X": ("-2.1419410907075056i", "0.6419410907075054i"),
+        "4 * X^0 + 4 * X^1 - 9.3 * X^2 = 0": (0.9052389907905898, -0.47513146390886934),
+        "1 * X^0 + 4 * X^1 = 0": -0.25,
+        "8 * X^0 - 6 * X^1 + 0 * X^2 - 5.6 * X^3 = 3 * X^0": None,
+        "5 * X^0 - 6 * X^1 + 0 * X^2 - 5.6 * X^3 = 0": None,
+        "5 + 4 * X + X^2= X^2": -1.25,
+        "0": None,
+        "=": None,
     }
     for input_equation, expected_result in test_input.items():
         print("##############start test################")
@@ -274,3 +288,16 @@ if __name__ == '__main__':
         test_computor()
     else:
         run_computor(argv[1])
+
+"""
+"C:\Program Files\Python36\python3.exe" C:/Users/ezburde/Documents/GIT/computorV1/a.py "5 + 4 * X + X^2= X^2"
+Equation: 5.0 + 4.0X + X^2 = X^2
+Reduced form: 5.0 + 4.0X = 0.0
+Polynomial degree: 1
+a = 4.0
+b = 5.0
+The solution is:
+-b / a = -1.25
+
+Process finished with exit code 0
+"""
