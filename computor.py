@@ -57,7 +57,14 @@ class Term:
     def __str__(self):
         if self._default:
             return ""
-        return self.__repr__()
+        result = ""
+        if self._variable_name and self._power > 0:
+            result = f"{self._variable_name}^{self._power}"
+        if not result or self._coefficient != 1:
+            result = f" {str(abs(self._coefficient)).rstrip('0').rstrip('.')}" + result
+        if result:
+            result = ("+" if self._coefficient > 0 else "-") + result
+        return result
 
     def __repr__(self):
         return "{}*{}^{}".format(
@@ -259,11 +266,13 @@ def test_computor():
         "5 + 3X + 3 * X^2 = X^2 + 0 * X": ("-2.1419410907075056i", "0.6419410907075054i"),
         "4 * X^0 + 4 * X^1 - 9.3 * X^2 = 0": (0.9052389907905898, -0.47513146390886934),
         "1 * X^0 + 4 * X^1 = 0": -0.25,
+        "1 + 4 * X = 0": -0.25,
         "8 * X^0 - 6 * X^1 + 0 * X^2 - 5.6 * X^3 = 3 * X^0": None,
         "5 * X^0 - 6 * X^1 + 0 * X^2 - 5.6 * X^3 = 0": None,
         "5 + 4 * X + X^2= X^2": -1.25,
         "0": None,
         "=": None,
+        "X + X + 1 + X^2 = 0": -1.0,
     }
     for input_equation, expected_result in test_input.items():
         print("##############start test################")
@@ -281,7 +290,7 @@ def test_computor():
 
 
 if __name__ == '__main__':
-    DEBUG = True
+    # DEBUG = True
     if len(argv) < 2:
         usage("Invalid number of arguments.")
     if argv[1] == "test":
