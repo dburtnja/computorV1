@@ -58,12 +58,14 @@ class Term:
         if self._default:
             return ""
         result = ""
-        if self._variable_name and self._power > 0:
+        if self._variable_name and self._power >= 2:
             result = f"{self._variable_name}^{self._power}"
+        if self._variable_name and self._power == 1:
+            result = str(self._variable_name)
         if not result or self._coefficient != 1:
-            result = f" {str(abs(self._coefficient)).rstrip('0').rstrip('.')}" + result
+            result = f"{str(abs(self._coefficient)).rstrip('0').rstrip('.')}" + result
         if result:
-            result = ("+" if self._coefficient > 0 else "-") + result
+            result = ("+ " if self._coefficient > 0 else "- ") + result
         return result
 
     def __repr__(self):
@@ -119,7 +121,7 @@ class Polynomial:
 
     def __str__(self):
         if self._terms:
-            return " ".join([str(term) for term in self._terms])
+            return " ".join([str(term) for term in self._terms]).lstrip("+ ")
         else:
             return "0"
 
