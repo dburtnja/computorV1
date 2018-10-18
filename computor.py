@@ -145,7 +145,7 @@ class Polynomial:
             print("Many solutions available.")
         else:
             print("No solution available.")
-        return ()
+        return None
 
     def _check_one_degree(self):
         a = self.get_term_coeff(A)
@@ -175,8 +175,25 @@ class Polynomial:
                 return self._run_formula("-"), self._run_formula("+")
             elif discriminant == 0:
                 return self._run_formula("+")
-        return ()
+            else:
+                return self._run_discriminant_formula(discriminant)
+        return None
 
+    def _run_discriminant_formula(self, discriminant):
+        a = self.get_term_coeff(A)
+        b = self.get_term_coeff(B)
+        if DEBUG:
+            print(f"a = {a}")
+            print(f"b = {b}")
+
+        (-b - (abs(discriminant) ** 0.5)) / (2 * a)
+        if DEBUG:
+            print("Running formula:")
+            print("\t(-b +/- (abs(discriminant) ** 0.5)) / (2 * a)")
+            print("\t(-{1} +/- (abs({2}) ** 0.5)) / (2 * {0})".format(a, b, discriminant))
+        negative_result = (-b - (abs(discriminant) ** 0.5)) / (2 * a)
+        positive_result = (-b + (abs(discriminant) ** 0.5)) / (2 * a)
+        return f"{negative_result}i", f"{positive_result}i"
 
 class PolynomialEquation:
 
@@ -212,7 +229,7 @@ def run_computor(input_equation):
     polynomial_equation.simplify()
     print(f"Reduced form: {polynomial_equation}")
     solution = polynomial_equation.find_solution()
-    if solution:
+    if solution is not None:
         print("The solution is:")
         if isinstance(solution, float):
             print(solution)
@@ -231,7 +248,8 @@ def test_computor():
         "2x - 4 = 0": 2,
         "2x^2 - 18 =0": (0.0, 9.0),
         "0 = 0": None,
-        "x=0": 0
+        "x=0": 0,
+        "5 + 3X + 3 * X^2 = X^2 + 0 * X": ("-2.1419410907075056i", "0.6419410907075054i")
     }
     for input_equation, expected_result in test_input.items():
         print("##############start test################")
@@ -256,21 +274,3 @@ if __name__ == '__main__':
         test_computor()
     else:
         run_computor(argv[1])
-
-
-"""
-"C:\Program Files\Python36\python3.exe" C:/Users/ezburde/Documents/GIT/computorV1/a.py "2x^2 - 18 =0"
-Equation: 2.0X^2 - 18.0 = 0.0
-Reduced form: - 18.0 + 2.0X^2 = 0.0
-Polynomial degree: 2
-a = 2.0
-b = -18.0
-c = 0
-d = 324.0
-Discriminant is strictly positive, the two solutions are:
-(-b - (d ** 0.5)) / (2 * a) = 0.0
-(-b + (d ** 0.5)) / (2 * a) = 9.0
-
-Process finished with exit code 0
-
-"""
