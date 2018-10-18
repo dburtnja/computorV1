@@ -1,6 +1,6 @@
 from sys import argv
-from re import findall, search
-from pprint import pprint
+from re import findall, search, match
+import argparse
 
 MAX_POLYNOMIAL_DEGREE = 2
 A = 0
@@ -8,12 +8,7 @@ B = 1
 C = 2
 
 DEBUG = False
-
-
-def usage(error=None):
-    if error:
-        print("Error: " + error)
-    print('Usage:\npython computor.py "<equation>"')
+TERM_VALIDATION_REGEX = r"\d*\.?\d*\s*\*?\s*(\w\s*(\^\s*\d+)?)?"
 
 
 class Term:
@@ -87,11 +82,22 @@ class Polynomial:
     def __init__(self, equation):
         self._terms = []
         equation = str(equation)
+        self._check_equation(equation)
         equation = equation.replace(" ", "").replace("*", "")
         self._split_terms(equation)
         self._degree = None
 
+    def _check_equation(self, equation):
+        for expretion in equation.split("+"):
+            for term_str in expretion.split("-"):
+                term_str = term_str.strip()
+                if match(TERM_VALIDATION_REGEX, term_str).group(0) != term_str:
+                    raise ValueError(f"Not valid term: {term_str}")
+
     def _split_terms(self, equation):
+        if DEBUG:
+            print("Available string terms:")
+            print("\t", findall(r"[\-\+]?[\d\w\.\^]+", equation))
         self._terms = \
             [Term(term_str)
              for term_str in findall(r"[\-\+]?[\d\w\.\^]+", equation)]
@@ -207,6 +213,7 @@ class Polynomial:
         positive_result = (-b + (abs(discriminant) ** 0.5)) / (2 * a)
         return f"{negative_result}i", f"{positive_result}i"
 
+
 class PolynomialEquation:
 
     def __init__(self, equation_string):
@@ -222,6 +229,8 @@ class PolynomialEquation:
         self._left_polynomial.simplify()
 
     def _move_all_terms_to_left(self):
+        if not self._right_polynomial._terms:
+            raise ValueError("This expression isn't equation")
         for term in self._right_polynomial._terms:
             self._left_polynomial._terms.append(term.change_sign())
         self._right_polynomial._terms = []
@@ -237,6 +246,7 @@ class PolynomialEquation:
 
 
 def run_computor(input_equation):
+    print("Input equation:", input_equation)
     try:
         polynomial_equation = PolynomialEquation(input_equation)
         polynomial_equation.simplify()
@@ -275,6 +285,8 @@ def test_computor():
         "0": None,
         "=": None,
         "X + X + 1 + X^2 = 0": -1.0,
+        "X + X *+ 1/X^2 = 0": None,
+        "X + X + 1X^2 =": None,
     }
     for input_equation, expected_result in test_input.items():
         print("##############start test################")
@@ -292,23 +304,17 @@ def test_computor():
 
 
 if __name__ == '__main__':
-    # DEBUG = True
-    if len(argv) < 2:
-        usage("Invalid number of arguments.")
-    if argv[1] == "test":
+    parser = argparse.ArgumentParser(
+        description="The program that solves a polynomial equation of degree less than or equal to 2"
+    )
+    parser.add_argument("equation", metavar="equation", type=str,
+                        help="Polynomial equation that must be solved", nargs=1)
+    parser.add_argument("-d", metavar="debug", action='store_const', const=True, default=False,
+                        help="Turns on debug mode")
+    args = parser.parse_args()
+    if args.d:
+        DEBUG = True
+    if args.equation[0] == "RUN_TEST":
         test_computor()
     else:
-        run_computor(argv[1])
-
-"""
-"C:\Program Files\Python36\python3.exe" C:/Users/ezburde/Documents/GIT/computorV1/a.py "5 + 4 * X + X^2= X^2"
-Equation: 5.0 + 4.0X + X^2 = X^2
-Reduced form: 5.0 + 4.0X = 0.0
-Polynomial degree: 1
-a = 4.0
-b = 5.0
-The solution is:
--b / a = -1.25
-
-Process finished with exit code 0
-"""
+        run_computor(args.equation[0])
