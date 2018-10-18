@@ -3,9 +3,11 @@ from re import findall, search
 from pprint import pprint
 
 MAX_POLYNOMIAL_DEGREE = 2
-A = 2
+A = 0
 B = 1
-C = 0
+C = 2
+
+DEBUG = False
 
 
 def usage(error=None):
@@ -17,14 +19,18 @@ def usage(error=None):
 class Term:
 
     _coefficient = 1
+    _variable_name = ""
+    _power = 0
 
-    def __init__(self, term_string):
+    def __init__(self, term_string, default=False):
+        self._default = default
         self._term_string = str(term_string)
         search_result = search(r"^([\-\+]?\d*\.?\d*)((\w)(\^(\d))?)?", self._term_string)
         if search_result.group(1):
             self._coefficient = float(search_result.group(1))
         if search_result.group(3):
             self._variable_name = search_result.group(3)
+            self._power = 1
         if search_result.group(5):
             self._power = int(search_result.group(5))
 
@@ -49,11 +55,16 @@ class Term:
         return self
 
     def __str__(self):
+        if self._default:
+            return ""
         return self.__repr__()
 
     def __repr__(self):
-        return \
-            f"{('%f' % self.get_coefficient()).rstrip('0').rstrip('.')}*{self._variable_name}^{self._power}"
+        return "{}*{}^{}".format(
+            ('%f' % self.get_coefficient()).rstrip('0').rstrip('.'),
+            self._variable_name,
+            self._power
+        )
 
     def __eq__(self, other):
         return self._power == other._power
@@ -76,8 +87,6 @@ class Polynomial:
             [Term(term_str)
              for term_str in findall(r"[\-\+]?[\d\w\.\^]+", equation)]
 
-    def _add_dummy_terms(self):
-
     def simplify(self):
         terms_start = list(self._terms)
         temporary_terms = []
@@ -93,7 +102,6 @@ class Polynomial:
             temporary_terms = []
             self._terms.append(term)
         self._terms = sorted(self._terms)
-        self._add_dummy_terms()
         self._degree = self._terms[-1].get_power()
 
     def get_degree(self):
@@ -106,7 +114,9 @@ class Polynomial:
             return "0"
 
     def get_term_coeff(self, index):
-        return self._terms[index].get_coefficient()
+        if len(self._terms) > index:
+            return self._terms[::-1][index].get_coefficient()
+        return 0
 
     def find_discriminant(self):
         return self.get_term_coeff(B) ** 2 - 4 * self.get_term_coeff(A) * self.get_term_coeff(C)
@@ -115,8 +125,16 @@ class Polynomial:
         a = self.get_term_coeff(A)
         b = self.get_term_coeff(B)
         c = self.get_term_coeff(C)
+        if DEBUG:
+            print(f"a = {a}")
+            print(f"b = {b}")
+            print(f"c = {c}")
         sqrt = lambda x: x**(1 / 2.0)
 
+        if DEBUG:
+            print("Running formula:")
+            print("\t(-b + sqrt(b**2 - 4 * a * c)) / (2 * a)")
+            print("\t(-{1} + sqrt({1}**2 - 4 * {0} * {2})) / (2 * {0})".format(a, b, c))
         if sign == "+":
             return (-b + sqrt(b**2 - 4 * a * c)) / (2 * a)
         else:
@@ -127,23 +145,32 @@ class Polynomial:
             print("Many solutions available.")
         else:
             print("No solution available.")
+        return ()
 
     def _check_one_degree(self):
-
+        a = self.get_term_coeff(A)
+        b = self.get_term_coeff(B) or 0
+        if DEBUG:
+            print(f"a = {a}")
+            print(f"b = {b}")
+            print("Run formula:")
+            print("-b / a")
+            print(f"-{b} / {a}")
+        return -b / a
 
     def find_solution(self):
-        discriminant = self.find_discriminant()
         degree = self.get_degree()
-        print(f"Polynomial discriminant: {discriminant}")
         print(f"Polynomial degree: {self.get_degree()}")
         if degree > MAX_POLYNOMIAL_DEGREE:
             print(f"The polynomial degree is strictly grader then "
                   f"{MAX_POLYNOMIAL_DEGREE}, I can't solve.")
         elif degree == 0:
-            self._check_zero_degree()
+            return self._check_zero_degree()
         elif degree == 1:
-            self._check_one_degree()
+            return self._check_one_degree()
         elif degree == 2:
+            discriminant = self.find_discriminant()
+            print(f"Polynomial discriminant: {discriminant}")
             if discriminant > 0:
                 return self._run_formula("-"), self._run_formula("+")
             elif discriminant == 0:
@@ -180,17 +207,70 @@ class PolynomialEquation:
         return self._left_polynomial.find_solution()
 
 
-if __name__ == '__main__':
-    if len(argv) != 2:
-        usage("Invalid number of arguments.")
-    polynomial_equation = PolynomialEquation(argv[1])
+def run_computor(input_equation):
+    polynomial_equation = PolynomialEquation(input_equation)
     polynomial_equation.simplify()
     print(f"Reduced form: {polynomial_equation}")
     solution = polynomial_equation.find_solution()
-    if len(solution) == 2:
-        print("Discriminant is strictly positive, the two solutions are:")
-        print(solution[0])
-        print(solution[1])
-    elif len(solution) == 1:
-        print(solution[0])
+    if solution:
+        print("The solution is:")
+        if isinstance(solution, float):
+            print(solution)
+        elif len(solution) == 2:
+            print("Discriminant is strictly positive, the two solutions are:")
+            print(solution[0])
+            print(solution[1])
+        return solution
 
+
+def test_computor():
+    failed = 0
+    test_input = {
+        "5 * X^0 + 4 * X^1 = 4 * X^0": -0.25,
+        "5 * X^0 + 4 * X^1 - 9.3 * X^2 = 1 * X^0": (0.9052389907905898, -0.47513146390886934),
+        "2x - 4 = 0": 2,
+        "2x^2 - 18 =0": (0.0, 9.0),
+        "0 = 0": None,
+        "x=0": 0
+    }
+    for input_equation, expected_result in test_input.items():
+        print("##############start test################")
+        print(f"Input: {input_equation}")
+        result = run_computor(input_equation)
+        if result == expected_result:
+            print("\033[32mOK\033[39m")
+        else:
+            failed += 1
+            print("\033[31mKO\033[39m")
+            print(f"\033[31mresult={result}, expected={expected_result}\033[39m")
+
+        print("################end test################\n")
+    print(f"Run {len(test_input)} tests {failed} failed.")
+
+
+if __name__ == '__main__':
+    DEBUG = True
+    if len(argv) < 2:
+        usage("Invalid number of arguments.")
+    if argv[1] == "test":
+        test_computor()
+    else:
+        run_computor(argv[1])
+
+
+"""
+"C:\Program Files\Python36\python3.exe" C:/Users/ezburde/Documents/GIT/computorV1/a.py "2x^2 - 18 =0"
+Equation: 2.0X^2 - 18.0 = 0.0
+Reduced form: - 18.0 + 2.0X^2 = 0.0
+Polynomial degree: 2
+a = 2.0
+b = -18.0
+c = 0
+d = 324.0
+Discriminant is strictly positive, the two solutions are:
+(-b - (d ** 0.5)) / (2 * a) = 0.0
+(-b + (d ** 0.5)) / (2 * a) = 9.0
+
+Process finished with exit code 0
+
+"""
