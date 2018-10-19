@@ -300,6 +300,7 @@ def test_computor():
         "1x = 0": 0,
         "x = y = z = ": None,
         "x - y = z": None,
+        "2x^2 - 3x + 4  =   0": ("-0.4489578808281798i", "1.9489578808281798i")
     }
     for input_equation, expected_result in test_input.items():
         print("##############start test################")
