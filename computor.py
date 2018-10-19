@@ -39,6 +39,9 @@ class Term:
     def get_power(self):
         return self._power
 
+    def get_variable_name(self):
+        return self._variable_name
+
     def merge(self, term):
         if self.is_like(term):
             self._coefficient = self.get_coefficient() + term.get_coefficient()
@@ -87,11 +90,13 @@ class Polynomial:
         self._split_terms(equation)
         self._degree = None
 
-    def _check_equation(self, equation):
+    @staticmethod
+    def _check_equation(equation):
         for expretion in equation.split("+"):
             for term_str in expretion.split("-"):
                 term_str = term_str.strip()
-                if match(TERM_VALIDATION_REGEX, term_str).group(0) != term_str:
+                re_obj = match(TERM_VALIDATION_REGEX, term_str)
+                if re_obj.group(0) != term_str:
                     raise ValueError(f"Not valid term: {term_str}")
 
     def _split_terms(self, equation):
@@ -234,6 +239,9 @@ class PolynomialEquation:
         for term in self._right_polynomial._terms:
             self._left_polynomial._terms.append(term.change_sign())
         self._right_polynomial._terms = []
+        variables = {term.get_variable_name() for term in self._left_polynomial._terms if term.get_variable_name()}
+        if len(variables) > 1:
+            raise ValueError(f"Unexpected variables: {', '.join(list(variables)[1:])}")
 
     def get_degree(self):
         return self._left_polynomial.get_degree()
@@ -287,6 +295,11 @@ def test_computor():
         "X + X + 1 + X^2 = 0": -1.0,
         "X + X *+ 1/X^2 = 0": None,
         "X + X + 1X^2 =": None,
+        "X = X = X": None,
+        "x = y": None,
+        "1x = 0": 0,
+        "x = y = z = ": None,
+        "x - y = z": None,
     }
     for input_equation, expected_result in test_input.items():
         print("##############start test################")
