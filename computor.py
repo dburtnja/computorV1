@@ -20,7 +20,7 @@ class Term:
     def __init__(self, term_string, default=False):
         self._default = default
         self._term_string = str(term_string)
-        search_result = search(r"^([\-\+]?)(\d*\.?\d*)((\w)(\^(\d))?)?", self._term_string)
+        search_result = search(r"^([\-\+]?)(\d*\.?\d*)((\w)(\^(\d+))?)?", self._term_string)
         if search_result.group(2) or search_result.group(1):
             self._coefficient = float(search_result.group(2) or 1) * float(search_result.group(1) + "1")
         if search_result.group(4):
@@ -300,7 +300,8 @@ def test_computor():
         "1x = 0": 0,
         "x = y = z = ": None,
         "x - y = z": None,
-        "2x^2 - 3x + 4  =   0": ("-0.4489578808281798i", "1.9489578808281798i")
+        "2x^2 - 3x + 4  =   0": ("-0.4489578808281798i", "1.9489578808281798i"),
+        "x^23 + 3 = 0": None,
     }
     for input_equation, expected_result in test_input.items():
         print("##############start test################")
